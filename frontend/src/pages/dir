@@ -1,0 +1,396 @@
+// Products.jsx
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
+import { productsApi, formatCOP, formatUSD, STATUS_LABELS, timeAgo } from '../services/api';
+import { Search, Play, Pause, Trash2, ExternalLink } from 'lucide-react';
+
+export function Products() {
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['products', search, status, page],
+    queryFn: () => productsApi.list({ search, status, page, limit: 20 }),
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: productsApi.publish,
+    onSuccess: () => { toast.success('Publicado en ML'); queryClient.invalidateQueries(['products']); },
+    onError: err => toast.error(err.message),
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: productsApi.pause,
+    onSuccess: () => { toast.success('Publicación pausada'); queryClient.invalidateQueries(['products']); },
+    onError: err => toast.error(err.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: productsApi.delete,
+    onSuccess: () => { toast.success('Eliminado'); queryClient.invalidateQueries(['products']); },
+    onError: err => toast.error(err.message),
+  });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-lg font-semibold text-gray-900">Catálogo de productos</h1>
+        <span className="text-sm text-gray-400">{data?.total || 0} productos</span>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Buscar por nombre o ASIN..."
+            value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+        </div>
+        <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
+          value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}>
+          <option value="">Todos los estados</option>
+          <option value="synced">Sincronizados</option>
+          <option value="pending">Pendientes</option>
+          <option value="draft">Borradores</option>
+          <option value="error">Con error</option>
+        </select>
+      </div>
+
+      {/* Tabla */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Producto</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">ASIN</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Precio Amazon</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Precio ML</th>
+              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Estado</th>
+              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500">Última sync</th>
+              <th className="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {isLoading && (
+              <tr><td colSpan={7} className="text-center py-8 text-gray-400">Cargando...</td></tr>
+            )}
+            {!isLoading && data?.products?.length === 0 && (
+              <tr><td colSpan={7} className="text-center py-8 text-gray-400">No hay productos. <a href="/import" className="text-blue-600">Importa uno</a></td></tr>
+            )}
+            {(data?.products || []).map(p => {
+              const statusInfo = STATUS_LABELS[p.sync_status] || STATUS_LABELS.draft;
+              const images = Array.isArray(p.amazon_images) ? p.amazon_images : [];
+              return (
+                <tr key={p.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-50 rounded-lg border border-gray-100 flex-shrink-0 overflow-hidden">
+                        {images[0]
+                          ? <img src={images[0]} alt="" className="w-full h-full object-contain" />
+                          : <span className="w-full h-full flex items-center justify-center text-lg">📦</span>}
+                      </div>
+                      <div className="max-w-xs">
+                        <p className="font-medium text-gray-800 truncate">{p.ml_title || p.amazon_title}</p>
+                        <p className="text-xs text-gray-400 truncate">{p.amazon_brand}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">{p.asin}</td>
+                  <td className="px-4 py-3 text-right text-gray-600">{formatUSD(p.amazon_price_usd)}</td>
+                  <td className="px-4 py-3 text-right font-medium text-gray-900">{formatCOP(p.ml_price_cop)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                      {statusInfo.label}
+                    </span>
+                    {p.sync_error && <p className="text-xs text-red-500 mt-0.5 truncate max-w-32">{p.sync_error}</p>}
+                  </td>
+                  <td className="px-4 py-3 text-center text-xs text-gray-400">{timeAgo(p.last_synced_at)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1 justify-end">
+                      {p.ml_item_id && (
+                        <a href={`https://articulo.mercadolibre.com.co/${p.ml_item_id}`} target="_blank" rel="noreferrer"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
+                          <ExternalLink size={14} />
+                        </a>
+                      )}
+                      {(p.sync_status === 'draft' || p.sync_status === 'pending') && (
+                        <button onClick={() => publishMutation.mutate(p.id)}
+                          className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded" title="Publicar">
+                          <Play size={14} />
+                        </button>
+                      )}
+                      {p.sync_status === 'synced' && (
+                        <button onClick={() => pauseMutation.mutate(p.id)}
+                          className="p-1.5 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded" title="Pausar">
+                          <Pause size={14} />
+                        </button>
+                      )}
+                      <button onClick={() => { if(confirm('¿Eliminar?')) deleteMutation.mutate(p.id); }}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded" title="Eliminar">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// PriceRules.jsx
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { configApi, formatCOP } from '../services/api';
+import { toast } from 'react-hot-toast';
+import { RefreshCw, Save } from 'lucide-react';
+import { useState } from 'react';
+
+export function PriceRules() {
+  const queryClient = useQueryClient();
+  const { data: config } = useQuery({ queryKey: ['config'], queryFn: configApi.get });
+  const [form, setForm] = useState({});
+
+  const cfg = { ...config, ...form };
+
+  const updateMutation = useMutation({
+    mutationFn: configApi.update,
+    onSuccess: () => { toast.success('Configuración guardada'); queryClient.invalidateQueries(['config']); },
+    onError: err => toast.error(err.message),
+  });
+
+  const trmMutation = useMutation({
+    mutationFn: configApi.getTRM,
+    onSuccess: (data) => { toast.success(`TRM actualizada: $${data.trm?.toLocaleString()}`); queryClient.invalidateQueries(['config']); },
+    onError: err => toast.error(err.message),
+  });
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const calcExample = () => {
+    const trm = parseFloat(cfg.trm || 4200);
+    const margin = parseFloat(cfg.default_margin || 0.2);
+    const comm = parseFloat(cfg.ml_commission || 0.11);
+    const priceUsd = 199;
+    const base = priceUsd * trm;
+    const withMargin = base * (1 + margin);
+    return Math.round(withMargin / (1 - comm));
+  };
+
+  return (
+    <div>
+      <h1 className="text-lg font-semibold text-gray-900 mb-5">Reglas de precio</h1>
+
+      <div className="grid grid-cols-2 gap-5">
+        <div className="bg-white rounded-xl border border-gray-100 p-5 space-y-5">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium text-gray-700">TRM (USD → COP)</label>
+              <button onClick={() => trmMutation.mutate()} disabled={trmMutation.isPending}
+                className="text-xs text-blue-600 flex items-center gap-1 hover:underline">
+                <RefreshCw size={11} className={trmMutation.isPending ? 'animate-spin' : ''} />
+                Actualizar del Banco de la República
+              </button>
+            </div>
+            <input type="number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              value={cfg.trm || ''} onChange={e => set('trm', e.target.value)} />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Margen de ganancia: <strong>{Math.round((parseFloat(cfg.default_margin || 0.2)) * 100)}%</strong>
+            </label>
+            <input type="range" min="5" max="100" step="1" className="w-full"
+              value={Math.round((parseFloat(cfg.default_margin || 0.2)) * 100)}
+              onChange={e => set('default_margin', (e.target.value / 100).toFixed(2))} />
+            <div className="flex justify-between text-xs text-gray-400 mt-1"><span>5%</span><span>100%</span></div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Comisión Mercado Libre: <strong>{Math.round((parseFloat(cfg.ml_commission || 0.11)) * 100)}%</strong>
+            </label>
+            <input type="range" min="5" max="20" step="0.5" className="w-full"
+              value={Math.round((parseFloat(cfg.ml_commission || 0.11)) * 100)}
+              onChange={e => set('ml_commission', (e.target.value / 100).toFixed(3))} />
+            <div className="flex justify-between text-xs text-gray-400 mt-1"><span>5%</span><span>20%</span></div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Precio mínimo (COP)</label>
+            <input type="number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              value={cfg.min_price_cop || ''} onChange={e => set('min_price_cop', e.target.value)} />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Frecuencia de sync automática</label>
+            <div className="space-y-2">
+              {[['0 * * * *','Cada hora'],['0 */6 * * *','Cada 6 horas'],['0 9 * * *','Diario (9am)'],['','Manual']].map(([val, label]) => (
+                <label key={label} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="radio" name="freq" value={val}
+                    checked={(cfg.sync_frequency || '0 * * * *') === val}
+                    onChange={() => set('sync_frequency', val)} />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <button onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isPending}
+            className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2">
+            <Save size={14} />
+            {updateMutation.isPending ? 'Guardando...' : 'Guardar configuración'}
+          </button>
+        </div>
+
+        {/* Ejemplo */}
+        <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <h2 className="text-sm font-medium text-gray-700 mb-4">Ejemplo con producto $199 USD</h2>
+          <div className="space-y-2 text-sm text-gray-600">
+            <div className="flex justify-between"><span>Precio Amazon</span><span>$199.00 USD</span></div>
+            <div className="flex justify-between"><span>× TRM (${parseFloat(cfg.trm || 4200).toLocaleString()})</span>
+              <span>${(199 * parseFloat(cfg.trm || 4200)).toLocaleString()} COP</span></div>
+            <div className="flex justify-between"><span>+ Margen ({Math.round(parseFloat(cfg.default_margin || 0.2) * 100)}%)</span>
+              <span className="text-green-600">+{formatCOP(199 * parseFloat(cfg.trm || 4200) * parseFloat(cfg.default_margin || 0.2))}</span></div>
+            <div className="flex justify-between"><span>+ Comisión ML ({Math.round(parseFloat(cfg.ml_commission || 0.11) * 100)}%)</span>
+              <span className="text-orange-500">+estimado</span></div>
+            <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-100 pt-2 mt-2">
+              <span>Precio final en ML</span>
+              <span className="text-green-600">{formatCOP(calcExample())}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// SyncHistory.jsx
+import { useQuery } from '@tanstack/react-query';
+import { syncApi, formatCOP, timeAgo } from '../services/api';
+
+export function SyncHistory() {
+  const { data: logs } = useQuery({ queryKey: ['sync-logs'], queryFn: () => syncApi.getLogs({ limit: 100 }) });
+
+  const icons = { ok: '✅', warn: '⚠️', error: '❌' };
+  const actionLabels = { import: 'Importación', price_update: 'Actualización precio', publish: 'Publicación', error: 'Error' };
+
+  return (
+    <div>
+      <h1 className="text-lg font-semibold text-gray-900 mb-5">Historial de sincronización</h1>
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Estado</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Producto</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Acción</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Detalle</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Precio anterior</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Precio nuevo</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500">Fecha</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {(logs || []).map(log => (
+              <tr key={log.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 text-base">{icons[log.status]}</td>
+                <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{log.product_name || '—'}</td>
+                <td className="px-4 py-3">
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                    {actionLabels[log.action] || log.action}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-gray-500 text-xs max-w-xs truncate">{log.message}</td>
+                <td className="px-4 py-3 text-right text-gray-400 text-xs">{log.old_price ? formatCOP(log.old_price) : '—'}</td>
+                <td className="px-4 py-3 text-right text-green-600 font-medium text-xs">{log.new_price ? formatCOP(log.new_price) : '—'}</td>
+                <td className="px-4 py-3 text-right text-gray-400 text-xs">{timeAgo(log.created_at)}</td>
+              </tr>
+            ))}
+            {(logs || []).length === 0 && (
+              <tr><td colSpan={7} className="text-center py-8 text-gray-400 text-sm">Sin historial aún</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// Configuration.jsx
+import { useQuery } from '@tanstack/react-query';
+import { authApi } from '../services/api';
+import { CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
+
+export function Configuration() {
+  const { data: auth } = useQuery({ queryKey: ['auth-status'], queryFn: authApi.getStatus });
+
+  const ConnStatus = ({ ok, label, sub }) => (
+    <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
+      {ok ? <CheckCircle2 size={20} className="text-green-500 mt-0.5" /> : <XCircle size={20} className="text-red-400 mt-0.5" />}
+      <div>
+        <p className="font-medium text-sm text-gray-800">{label}</p>
+        <p className="text-xs text-gray-500">{sub}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <h1 className="text-lg font-semibold text-gray-900 mb-5">Configuración de APIs</h1>
+
+      <div className="grid grid-cols-2 gap-5">
+        {/* Amazon */}
+        <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <h2 className="font-semibold text-gray-800 mb-1">Amazon SP-API</h2>
+          <p className="text-xs text-gray-500 mb-4">Necesaria para obtener productos, precios e imágenes.</p>
+          <ConnStatus ok={auth?.amazon?.connected} label="Amazon SP-API"
+            sub={auth?.amazon?.connected ? 'Conectado correctamente' : 'No configurado'} />
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 space-y-1">
+            <p className="font-medium text-gray-700">Variables necesarias en .env:</p>
+            <p className="font-mono">AMAZON_CLIENT_ID=amzn1.application-oa2-client...</p>
+            <p className="font-mono">AMAZON_CLIENT_SECRET=...</p>
+            <p className="font-mono">AMAZON_REFRESH_TOKEN=Atzr|...</p>
+            <p className="font-mono">AMAZON_MARKETPLACE_ID=A2Q3Y263D00KWC</p>
+          </div>
+          <a href="https://sellercentral.amazon.com" target="_blank" rel="noreferrer"
+            className="mt-3 flex items-center gap-1 text-xs text-blue-600 hover:underline">
+            <ExternalLink size={11} /> Ir a Amazon Seller Central
+          </a>
+        </div>
+
+        {/* Mercado Libre */}
+        <div className="bg-white rounded-xl border border-gray-100 p-5">
+          <h2 className="font-semibold text-gray-800 mb-1">Mercado Libre API</h2>
+          <p className="text-xs text-gray-500 mb-4">Necesaria para publicar y actualizar precios en ML.</p>
+          <ConnStatus ok={auth?.mercadolibre?.connected}
+            label={`Mercado Libre${auth?.mercadolibre?.user ? ` — ${auth.mercadolibre.user.nickname}` : ''}`}
+            sub={auth?.mercadolibre?.connected ? `Usuario: ${auth.mercadolibre.user?.email || ''}` : 'No autenticado'} />
+          {!auth?.mercadolibre?.connected && (
+            <button onClick={async () => {
+              const { auth_url } = await authApi.getMlAuthUrl();
+              window.open(auth_url, '_blank');
+            }} className="mt-4 w-full py-2.5 bg-yellow-400 text-gray-900 rounded-lg text-sm font-medium hover:bg-yellow-500">
+              Conectar con Mercado Libre
+            </button>
+          )}
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 space-y-1">
+            <p className="font-medium text-gray-700">Variables necesarias en .env:</p>
+            <p className="font-mono">ML_APP_ID=XXXXXX</p>
+            <p className="font-mono">ML_SECRET_KEY=XXXXXX</p>
+            <p className="font-mono">ML_SITE_ID=MCO</p>
+          </div>
+          <a href="https://developers.mercadolibre.com.co" target="_blank" rel="noreferrer"
+            className="mt-3 flex items-center gap-1 text-xs text-blue-600 hover:underline">
+            <ExternalLink size={11} /> Ir a ML Developers
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(node src/scripts/seedCatalog.js)",
+      "Bash(node -e ' *)",
+      "Bash(npx kill-port *)",
+      "Bash(node src/index.js)",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Bash(curl *)",
+      "PowerShell(npm run *)",
+      "Bash(lt --port 3001 --subdomain amazonmlsync2024)",
+      "Bash(pkill -f \"lt --port\")",
+      "Bash(pkill -f \"localtunnel\")",
+      "Bash(lt --port 3001 --subdomain diegomlsync2024)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const r=JSON.parse\\(d\\); r.forEach\\(x=>console.log\\(x.category_id, x.category_name, '|', x.domain_name\\)\\)\")",
+      "Bash(node -e \" const axios = require\\('axios'\\); // Intentar con token autenticado const token = process.env.ML_ACCESS_TOKEN || require\\('fs'\\).readFileSync\\('./data/sync.db'\\).toString\\(\\).split\\('ml_access_token'\\)[1]?.slice\\(0,50\\); console.log\\('token prefix:', token?.slice\\(0,20\\)\\); \")",
+      "Bash(echo \"Túnel iniciado en background PID: $!\")",
+      "PowerShell(claudecd *)",
+      "PowerShell(npm install *)",
+      "PowerShell(cd \"$env:USERPROFILE\\\\OneDrive\\\\Desktop\\\\codigo app amazon mercado\\\\files\\\\backend\" ; node -e \"require\\('./src/database'\\).initialize\\(\\); setTimeout\\(\\(\\) => { require\\('./src/middleware/auth'\\); require\\('./src/routes/users'\\); require\\('./src/routes/payments'\\); console.log\\('OK - todos los módulos cargan correctamente'\\); process.exit\\(0\\); }, 800\\);\" 2>&1)",
+      "PowerShell(cd \"$env:USERPROFILE\\\\OneDrive\\\\Desktop\\\\codigo app amazon mercado\\\\files\\\\frontend\" ; npx vite build --mode development 2>&1 | Select-Object -Last 20)"
+    ]
+  }
+}
