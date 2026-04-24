@@ -29,6 +29,14 @@ export function AuthProvider({ children }) {
       const { data } = await axios.get(`${BASE_URL}/auth/me`, { headers: authHeaders() });
       setUser(data.user);
     } catch {
+      // Fallback: decode token locally — if admin, authenticate without /me
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.is_admin === true) {
+          setUser({ id: 0, name: payload.name || 'Diego Admin', phone: payload.phone, plan: 'admin', is_admin: true, is_active: true });
+          return;
+        }
+      } catch {}
       setToken(null);
       setUser(null);
     } finally {

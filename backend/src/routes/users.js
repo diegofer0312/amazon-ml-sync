@@ -229,6 +229,18 @@ router.post('/verify-otp', async (req, res) => {
 
 // GET /api/auth/me
 router.get('/me', requireAuth, (req, res) => {
+  if (req.user.is_admin) {
+    return res.json({
+      user: {
+        id: 0,
+        name: req.user.name || 'Diego Admin',
+        phone: req.user.phone || process.env.ADMIN_PHONE,
+        plan: 'admin',
+        is_admin: true,
+        is_active: true,
+      }
+    });
+  }
   res.json({ user: sanitizeUser(req.user) });
 });
 
