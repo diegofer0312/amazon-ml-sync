@@ -13,6 +13,7 @@ const mercadolibreRouter = require("./routes/mercadolibre");
 const syncRouter = require("./routes/sync");
 const authRouter = require("./routes/auth");
 const usersRouter = require("./routes/users");
+const adminRouter = require("./routes/admin");
 const paymentsRouter = require("./routes/payments");
 const configRouter = require("./routes/config");
 const csvRouter = require("./routes/csv");
@@ -29,7 +30,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(helmet());
-app.use(cors({ origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5175", "https://amazon-ml-sync-frontend.vercel.app"] }));
+app.use(cors({ origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5175", "https://amazon-ml-sync-frontend.vercel.app", "https://frontend-three-eosin-39.vercel.app"] }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/", rateLimit({ windowMs: 15 * 60 * 1000, max: 500 }));
@@ -59,6 +60,7 @@ db.initialize();
 // Rutas públicas (no requieren JWT)
 app.use("/api/auth", authRouter);
 app.use("/api/auth", usersRouter);
+app.use("/api", adminRouter);
 app.use("/api/payments/webhook", paymentsRouter);
 
 // Rutas protegidas con JWT

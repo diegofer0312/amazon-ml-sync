@@ -23,6 +23,7 @@ import MlCallback from './pages/MlCallback';
 import Catalog from './pages/Catalog';
 import AddLocalProduct from './pages/AddLocalProduct';
 import Login from './pages/Login';
+import Admin from './pages/Admin';
 import Register from './pages/Register';
 import Pricing from './pages/Pricing';
 import Subscription from './pages/Subscription';
@@ -33,6 +34,20 @@ import './index.css';
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
 });
+
+// Protege ruta /admin: solo is_admin: true
+function AdminRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!user?.is_admin) return <Navigate to="/login" replace />;
+  return children;
+}
 
 // Protege rutas: redirige a /login si no hay sesión
 function PrivateRoute({ children }) {
@@ -240,6 +255,8 @@ export default function App() {
             {/* Rutas públicas */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            {/* Panel admin */}
+            <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/auth/callback" element={<MlCallback />} />
 

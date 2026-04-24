@@ -75,6 +75,13 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const loginAdmin = async (phone) => {
+    const { data } = await axios.post(`${BASE_URL}/auth/admin-login`, { phone });
+    setToken(data.token);
+    setUser(data.user);
+    return data;
+  };
+
   const verifyOtp = async (phone, otp) => {
     const { data } = await axios.post(`${BASE_URL}/auth/verify-otp`, { phone, otp });
     setToken(data.token);
@@ -100,7 +107,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user, loading,
       register, login, loginWithGoogle, loginWithFacebook,
-      sendOtp, verifyOtp, logout, isPro,
+      sendOtp, verifyOtp, loginAdmin, logout, isPro,
       getToken, authHeaders,
       isAuthenticated: !!user,
     }}>

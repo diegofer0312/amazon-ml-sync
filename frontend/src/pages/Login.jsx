@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { Eye, EyeOff, Mail, Lock, Phone, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function Login() {
-  const { login, loginWithGoogle, sendOtp, verifyOtp } = useAuth();
+  const { login, loginWithGoogle, sendOtp, verifyOtp, loginAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/';
@@ -16,6 +16,10 @@ export default function Login() {
   const [otpSent, setOtpSent] = useState(false);
 
   const [form, setForm] = useState({ email: '', password: '', phone: '', otp: '' });
+
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminPhone, setAdminPhone] = useState('');
+  const [adminLoading, setAdminLoading] = useState(false);
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -63,6 +67,20 @@ export default function Login() {
     }
   };
 
+  const handleAdminLogin = async (e) => {
+    e.preventDefault();
+    setAdminLoading(true);
+    try {
+      await loginAdmin(adminPhone);
+      setShowAdminModal(false);
+      navigate('/admin', { replace: true });
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Acceso denegado');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   const handleGoogle = () => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) return toast.error('Google OAuth no configurado');
@@ -78,7 +96,61 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 relative">
+      {/* Admin access button — bottom right corner */}
+      <button
+        onClick={() => setShowAdminModal(true)}
+        title="Acceso administrador"
+        className="fixed bottom-5 right-5 w-9 h-9 bg-gray-800/70 hover:bg-gray-800 text-gray-400 hover:text-amber-400 rounded-full flex items-center justify-center transition-colors shadow-lg backdrop-blur-sm z-10"
+      >
+        <Lock size={14} />
+      </button>
+
+      {/* Admin modal */}
+      {showAdminModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-amber-500/30 rounded-2xl w-full max-w-sm p-8 shadow-2xl relative">
+            <button
+              onClick={() => setShowAdminModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              <span className="text-lg leading-none">&times;</span>
+            </button>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                <Lock size={16} className="text-gray-900" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white leading-tight">Acceso Administrador</h2>
+                <p className="text-xs text-amber-400/80">Panel exclusivo</p>
+              </div>
+            </div>
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div className="relative">
+                <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="tel"
+                  placeholder="+57 300 000 0000"
+                  value={adminPhone}
+                  onChange={e => setAdminPhone(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 transition-colors"
+                  required
+                  autoFocus
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={adminLoading}
+                className="w-full bg-amber-500 text-gray-900 py-3 rounded-xl font-semibold text-sm hover:bg-amber-400 disabled:opacity-60 flex items-center justify-center gap-2 transition-colors"
+              >
+                {adminLoading ? <Loader2 size={15} className="animate-spin" /> : <ArrowRight size={15} />}
+                {adminLoading ? 'Verificando...' : 'Entrar como Admin'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
