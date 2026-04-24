@@ -157,6 +157,17 @@ router.post('/phone', async (req, res) => {
     const { phone } = req.body;
     if (!phone) return res.status(400).json({ error: 'Número de teléfono requerido' });
 
+    if (phone === process.env.ADMIN_PHONE) {
+      const adminUser = { id: 0, phone, name: 'Diego Admin', plan: 'admin', is_admin: true };
+      const token = jwt.sign(
+        { userId: 0, is_admin: true, phone, name: 'Diego Admin', plan: 'admin' },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+      logger.info(`Admin login: ${phone}`);
+      return res.json({ success: true, token, user: adminUser });
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore.set(phone, { otp, expires: Date.now() + 10 * 60 * 1000 });
 

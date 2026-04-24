@@ -68,6 +68,10 @@ export function AuthProvider({ children }) {
 
   const sendOtp = async (phone) => {
     const { data } = await axios.post(`${BASE_URL}/auth/phone`, { phone });
+    if (data.token) {
+      setToken(data.token);
+      setUser(data.user);
+    }
     return data;
   };
 

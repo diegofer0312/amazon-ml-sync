@@ -36,9 +36,13 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await sendOtp(form.phone);
-      setOtpSent(true);
-      toast.success('Código enviado por SMS');
+      const result = await sendOtp(form.phone);
+      if (result.user?.is_admin) {
+        navigate(from, { replace: true });
+      } else {
+        setOtpSent(true);
+        toast.success('Código enviado por SMS');
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Error al enviar código');
     } finally {

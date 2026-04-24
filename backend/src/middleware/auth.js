@@ -17,6 +17,11 @@ async function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Token inválido o expirado' });
   }
 
+  if (payload.is_admin) {
+    req.user = { id: 0, phone: payload.phone, name: payload.name, plan: 'admin', is_admin: true, is_active: 1 };
+    return next();
+  }
+
   const user = await get('SELECT * FROM users WHERE id = ? AND is_active = 1', [payload.userId]);
   if (!user) return res.status(401).json({ error: 'Usuario no encontrado' });
 
