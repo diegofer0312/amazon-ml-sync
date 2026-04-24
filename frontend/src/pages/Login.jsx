@@ -72,11 +72,10 @@ export default function Login() {
     setAdminLoading(true);
     try {
       await loginAdmin(adminPhone);
-      setShowAdminModal(false);
-      navigate('/admin', { replace: true });
+      // Full reload so AuthContext re-reads the token from localStorage cleanly
+      window.location.replace('/admin');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Acceso denegado');
-    } finally {
       setAdminLoading(false);
     }
   };

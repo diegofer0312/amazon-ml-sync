@@ -38,6 +38,7 @@ const queryClient = new QueryClient({
 // Protege ruta /admin: solo is_admin: true
 function AdminRoute({ children }) {
   const { user, loading } = useAuth();
+  // Show spinner while auth is resolving (covers the full-reload flow)
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-950">
