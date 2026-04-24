@@ -1,0 +1,27 @@
+name: Deploy Frontend to Vercel
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel
+        working-directory: frontend
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: prj_XPJf2ZGR5Pz98QUwYRaQSZRWDtuK
+          VERCEL_ORG_ID: team_05Q7Awro0knSl2oaPTgIQs2a
+        run: |
+          vercel --prod --yes \
+            --token $VERCEL_TOKEN \
+            --env VITE_API_URL=https://amazon-ml-sync-production.up.railway.app/api
