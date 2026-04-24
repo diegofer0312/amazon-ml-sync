@@ -29,7 +29,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(helmet());
-app.use(cors({ origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5175"] }));
+app.use(cors({ origin: ["http://localhost:3000", "http://localhost:5173", "http://localhost:5175", "https://amazon-ml-sync-frontend.vercel.app"] }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/", rateLimit({ windowMs: 15 * 60 * 1000, max: 500 }));
