@@ -99,6 +99,7 @@ export function AuthProvider({ children }) {
 
   const isPro = () => {
     if (!user) return false;
+    if (user.is_admin) return true;
     if (user.plan === 'pro' && user.plan_expires_at && new Date(user.plan_expires_at) > new Date()) return true;
     return false;
   };

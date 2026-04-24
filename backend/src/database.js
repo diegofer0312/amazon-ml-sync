@@ -152,8 +152,18 @@ async function initialize() {
       ml_user_id TEXT,
       rainforest_api_key TEXT,
       is_active INTEGER DEFAULT 1,
+      payment_method TEXT,
+      payment_notes TEXT,
+      suspended_at TEXT,
+      created_by TEXT DEFAULT 'self',
       created_at TEXT DEFAULT (datetime('now'))
     )`);
+
+    // Migrations: add new columns to existing DBs
+    db.run(`ALTER TABLE users ADD COLUMN payment_method TEXT`, () => {});
+    db.run(`ALTER TABLE users ADD COLUMN payment_notes TEXT`, () => {});
+    db.run(`ALTER TABLE users ADD COLUMN suspended_at TEXT`, () => {});
+    db.run(`ALTER TABLE users ADD COLUMN created_by TEXT DEFAULT 'self'`, () => {});
 
     db.run(`CREATE TABLE IF NOT EXISTS subscriptions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

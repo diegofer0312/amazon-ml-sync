@@ -4,7 +4,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import {
   LayoutDashboard, Package, Download, DollarSign, History, Settings,
   RefreshCw, Link2, FileUp, MessageSquare, TrendingDown, ShoppingBag,
-  Bell, BarChart2, Users, ChevronDown, Store, LogOut, CreditCard
+  Bell, BarChart2, Users, ChevronDown, Store, LogOut, CreditCard, ShieldCheck
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
@@ -195,29 +195,42 @@ function Layout() {
 
       <div className="flex flex-1">
         {/* Sidebar */}
-        <nav className="w-52 bg-white border-r border-gray-200 py-4 flex-shrink-0 overflow-y-auto">
-          {navItems.map(({ to, icon: Icon, label, badge }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-4 py-2.5 text-sm mx-2 rounded-lg mb-0.5 transition-colors ${
-                  isActive
-                    ? 'bg-blue-50 text-blue-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`
-              }
-            >
-              <Icon size={16} />
-              <span className="flex-1">{label}</span>
-              {badge > 0 && (
-                <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                  {badge > 99 ? '99+' : badge}
-                </span>
-              )}
-            </NavLink>
-          ))}
+        <nav className="w-52 bg-white border-r border-gray-200 py-4 flex-shrink-0 overflow-y-auto flex flex-col">
+          <div className="flex-1">
+            {navItems.map(({ to, icon: Icon, label, badge }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === '/'}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-4 py-2.5 text-sm mx-2 rounded-lg mb-0.5 transition-colors ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`
+                }
+              >
+                <Icon size={16} />
+                <span className="flex-1">{label}</span>
+                {badge > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
+              </NavLink>
+            ))}
+          </div>
+          {user?.is_admin && (
+            <div className="px-2 pb-2 mt-2 border-t border-gray-100 pt-2">
+              <NavLink
+                to="/admin"
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-lg transition-colors bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium"
+              >
+                <ShieldCheck size={16} />
+                Panel Admin
+              </NavLink>
+            </div>
+          )}
         </nav>
 
         {/* Main content */}
