@@ -6,6 +6,7 @@ const path = require('path');
 const { get, all, run } = require('../database');
 const { JWT_SECRET } = require('../middleware/auth');
 const logger = require('../utils/logger');
+const { ALL_PRODUCTS } = require('../data/catalog-products');
 
 const router = express.Router();
 
@@ -227,7 +228,8 @@ router.get('/admin/logs', requireAdmin, (req, res) => {
 
 // POST /api/admin/seed-catalog
 router.post('/admin/seed-catalog', requireAdmin, async (req, res) => {
-  const PRODUCTS = [
+  const PRODUCTS = ALL_PRODUCTS;
+  const _LEGACY = [
     { asin:'B07DNJZQMX', category:'Licuadoras', brand:'Ninja', title:'Ninja BL610 Licuadora Profesional 1000W', price_usd:69.99, rating:4.7, description:'Licuadora profesional con 72 oz de capacidad, auto-iQ y cuchillas de acero inoxidable.', features:['1000 vatios de potencia','Capacidad 72 oz','Cuchillas de acero inoxidable','Función Auto-iQ'], images:['https://m.media-amazon.com/images/I/71B7I5BBTIL._AC_SL1500_.jpg'] },
     { asin:'B084ZKF3G9', category:'Licuadoras', brand:'NutriBullet', title:'NutriBullet NBR-0601 Licuadora Personal 600W', price_usd:49.99, rating:4.6, description:'Licuadora personal compacta ideal para smoothies y batidos proteicos.', features:['600 vatios','Vaso de 24 oz','Sin BPA','Fácil de limpiar'], images:['https://m.media-amazon.com/images/I/61g8TKQRJPL._AC_SL1500_.jpg'] },
     { asin:'B01MXJUIMF', category:'Licuadoras', brand:'Oster', title:'Oster Pro 1200 Licuadora con Procesador', price_usd:59.95, rating:4.5, description:'Licuadora Oster con motor de 1200 vatios y 7 velocidades para resultados perfectos.', features:['1200 vatios','7 velocidades','Vaso de vidrio 6 cups','Función Reverse'], images:['https://m.media-amazon.com/images/I/81ZI7CJHQFL._AC_SL1500_.jpg'] },
@@ -386,13 +388,17 @@ router.post('/admin/seed-catalog', requireAdmin, async (req, res) => {
     for (const p of PRODUCTS) {
       if (!summary.categories[p.category]) summary.categories[p.category] = { inserted: 0, skipped: 0 };
       try {
-        const existing = await get('SELECT id FROM catalog WHERE asin = ?', [p.asin]);
+        const src = p.source || (p.supplier_name === 'Dropi' ? 'dropi' : 'amazon');
+        const existing = p.asin
+          ? await get('SELECT id FROM catalog WHERE asin = ?', [p.asin])
+          : await get('SELECT id FROM catalog WHERE title = ? AND source = ?', [p.title, src]);
         if (existing) { summary.skipped++; summary.categories[p.category].skipped++; continue; }
         await run(
-          `INSERT INTO catalog (asin, title, description, price_usd, images, category, brand, features, rating, source, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'amazon', 'ready', ?, ?)`,
-          [p.asin, p.title, p.description, p.price_usd, JSON.stringify(p.images),
-           p.category, p.brand, JSON.stringify(p.features), p.rating, now, now]
+          `INSERT INTO catalog (asin, title, description, price_usd, images, category, brand, features, rating, source, supplier_name, supplier_price_cop, status, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?)`,
+          [p.asin || null, p.title, p.description, p.price_usd || null, JSON.stringify(p.images),
+           p.category, p.brand, JSON.stringify(p.features), p.rating,
+           src, p.supplier_name || null, p.supplier_price_cop || null, now, now]
         );
         summary.inserted++; summary.categories[p.category].inserted++;
       } catch (e) { summary.errors++; }

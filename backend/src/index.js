@@ -39,6 +39,37 @@ app.use((req, res, next) => { logger.info(req.method + " " + req.path); next(); 
 
 db.initialize();
 
+// Auto-seed catalog on startup if empty (Railway wipes SQLite on each deploy)
+setTimeout(async () => {
+  try {
+    const { ALL_PRODUCTS } = require('./data/catalog-products');
+    const { run, get } = require('./database');
+    const row = await get("SELECT COUNT(*) as cnt FROM catalog WHERE status = 'ready'");
+    if ((row?.cnt || 0) === 0) {
+      logger.info('Catálogo vacío — iniciando auto-seed...');
+      const now = new Date().toISOString();
+      let inserted = 0;
+      for (const p of ALL_PRODUCTS) {
+        try {
+          const src = p.source || (p.supplier_name === 'Dropi' ? 'dropi' : 'amazon');
+          const existing = p.asin
+            ? await get('SELECT id FROM catalog WHERE asin = ?', [p.asin])
+            : await get('SELECT id FROM catalog WHERE title = ? AND source = ?', [p.title, src]);
+          if (existing) continue;
+          await run(
+            `INSERT INTO catalog (asin, title, description, price_usd, images, category, brand, features, rating, source, supplier_name, supplier_price_cop, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', ?, ?)`,
+            [p.asin || null, p.title, p.description, p.price_usd || null, JSON.stringify(p.images),
+             p.category, p.brand, JSON.stringify(p.features), p.rating,
+             src, p.supplier_name || null, p.supplier_price_cop || null, now, now]
+          );
+          inserted++;
+        } catch (_) {}
+      }
+      logger.info(`Auto-seed completado: ${inserted} productos insertados`);
+    }
+  } catch (e) { logger.warn('Auto-seed error:', e.message); }
+}, 2000);
+
 // Cargar tokens ML desde DB al arrancar
 (async () => {
   try {
