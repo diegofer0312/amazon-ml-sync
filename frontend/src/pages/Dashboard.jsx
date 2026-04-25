@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { syncApi, productsApi, formatCOP, timeAgo } from '../services/api';
 import { CheckCircle2, AlertTriangle, XCircle, Clock, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import TradingViewWidget from '../components/TradingViewWidget';
 
 function StatCard({ label, value, icon: Icon, color, sub }) {
   const colors = {
@@ -61,6 +62,15 @@ export default function Dashboard() {
           icon={TrendingUp} color="blue" sub={`Última: ${timeAgo(stats?.lastSync)}`} />
         <StatCard label="Con errores" value={isLoading ? '...' : stats?.errors || 0}
           icon={XCircle} color="red" sub="Requieren atención" />
+      </div>
+
+      {/* TradingView — Oro XAUUSD */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5 mb-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-gray-700">XAU/USD — Oro en tiempo real</h2>
+          <span className="text-xs text-gray-400">Pepperstone · TradingView</span>
+        </div>
+        <TradingViewWidget symbol="PEPPERSTONE:XAUUSD" interval="60" height={420} />
       </div>
 
       <div className="grid grid-cols-2 gap-5">
